@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#05091f">
+  <meta name="description" content="Level Up Confidence Checkpoint - prepare to enter Interview Arena.">
+  <title>Level Up | Confidence Checkpoint</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="github.css">
+</head>
+<body>
+  <main class="app" id="app">
+    <header class="hud">
+      <div class="brand"><span class="crest">LU</span><span><b>LEVEL UP</b><small>CONFIDENCE CHECKPOINT</small></span></div>
+      <div class="journey">
+        <div class="journey-line"><span id="chapter">ARRIVAL</span><span id="sceneLabel">SCENE 1 OF 16</span></div>
+        <div class="progress"><i id="progressFill"></i></div>
+      </div>
+      <div class="status"><span id="cloudStatus" class="cloud-status">☁ Connecting</span><strong id="xp">0 XP</strong><button id="backBtn" aria-label="Previous scene">←</button><button id="soundBtn" aria-label="Mute narration">🔊</button><button id="resetBtn" aria-label="Reset checkpoint">↻</button></div>
+    </header>
+
+    <section class="stage" aria-live="polite">
+      <img id="sceneImage" alt="">
+      <video id="narration" playsinline preload="metadata"></video>
+      <button id="narrationBtn" class="narration-btn">▶ Play narration & captions</button>
+      <div id="hotspots" class="hotspots"></div>
+      <div id="exploreStatus" class="explore-status" hidden></div>
+      <div id="captionFallback" class="caption-fallback" hidden></div>
+    </section>
+
+    <nav class="controls" aria-label="Scene navigation">
+      <button id="prevBtn" class="secondary">← Back</button>
+      <button id="accessBtn" class="secondary">◉ Accessibility</button>
+      <button id="nextBtn" class="primary">Continue →</button>
+    </nav>
+  </main>
+
+  <dialog id="activityDialog" class="modal">
+    <div class="modal-head"><div><small>CONFIDENCE CHECKPOINT · MICRO LESSON</small><h2 id="modalTitle"></h2></div><button id="closeModal" aria-label="Close">×</button></div>
+    <div id="modalBody"></div>
+  </dialog>
+
+  <dialog id="accessDialog" class="modal compact">
+    <div class="modal-head"><div><small>ACCESSIBILITY</small><h2>Choose how you learn</h2></div><button class="close-access" aria-label="Close">×</button></div>
+    <label class="switch-row"><span>Play narration automatically</span><input id="autoPlay" type="checkbox" checked></label>
+    <label class="switch-row"><span>Show visual captions</span><input id="showCaptions" type="checkbox" checked></label>
+    <label class="switch-row"><span>Reduce motion</span><input id="reduceMotion" type="checkbox"></label>
+  </dialog>
+
+  <section id="report" class="report" hidden></section>
+  <section id="entryGate" class="entry-gate" hidden>
+    <div class="gate-card"><span class="crest">LU</span><p class="eyebrow">LEVEL UP · CONFIDENCE CHECKPOINT</p><h1 id="gateTitle">Connecting your journey…</h1><p id="gateMessage">Checking your Level Up progress.</p><div id="gateProgress" class="gate-progress"></div><a id="gateAction" class="gate-action" href="https://pinalworkforce1-del.github.io/Level_Up_Portal/">Return to My Journey</a></div>
+  </section>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="config.js"></script>
+  <script src="supabase-sync.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
