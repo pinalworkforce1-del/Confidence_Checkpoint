@@ -90,5 +90,74 @@
     ['play','pause','ended','volumechange','loadedmetadata'].forEach((eventName)=>video.addEventListener(eventName,refresh));
   }
   new MutationObserver(refresh).observe(next||app,{attributes:true,attributeFilter:['disabled','class']});
+
+  // Older saved/cloud states can contain complete=true without the reflection
+  // activity flag. Completion is authoritative: remove the pulsing hotspot and
+  // replace the old 0-of-1 prompt with a stable completed state.
+  const nativeReveal=typeof reveal==='function'?reveal:null;
+  const normalizeFinalScene=()=>{
+    if(typeof state==='undefined'||state.scene!==15||!state.complete)return false;
+    state.earned ||= {};
+    if(!state.earned.reflection){
+      state.earned.reflection=true;
+      try{save();}catch(_error){}
+    }
+    const finalHotspots=document.getElementById('hotspots');
+    if(finalHotspots)finalHotspots.innerHTML='';
+    const explore=document.getElementById('exploreStatus');
+    if(explore){
+      explore.hidden=false;
+      explore.textContent='✓ Reflection complete';
+    }
+    if(next)next.disabled=false;
+    setTimeout(refresh,0);
+    return true;
+  };
+
+  if(nativeReveal){
+    reveal=function(){
+      if(normalizeFinalScene())return;
+      return nativeReveal();
+    };
+  }
+
+  // Present the readiness plan as an in-place completion sheet instead of a
+  // document appearing below the module at the learner's previous scroll
+  // position. Put Continue to Interview Arena first and keep the action bar
+  // visible while the learner reviews or saves the plan.
+  const nativeShowReport=typeof showReport==='function'?showReport:null;
+  if(nativeShowReport){
+    showReport=function(){
+      if(typeof state!=='undefined'&&state.complete){
+        state.earned ||= {};
+        state.earned.reflection=true;
+        try{save();}catch(_error){}
+      }
+      nativeShowReport();
+      const report=document.getElementById('report');
+      if(!report)return;
+      document.body.classList.add('report-open');
+      report.classList.add('report-overlay');
+      const actions=report.querySelector('.report-actions');
+      const grid=report.querySelector('.report-grid');
+      const arena=report.querySelector('#arenaBtn');
+      if(actions&&grid)report.insertBefore(actions,grid);
+      if(actions&&arena)actions.prepend(arena);
+      const returnButton=report.querySelector('#returnLesson');
+      if(returnButton){
+        const nativeReturn=returnButton.onclick;
+        returnButton.onclick=(event)=>{
+          document.body.classList.remove('report-open');
+          report.classList.remove('report-overlay');
+          if(nativeReturn)nativeReturn.call(returnButton,event);
+          setTimeout(normalizeFinalScene,0);
+        };
+      }
+      report.scrollTop=0;
+      window.scrollTo({top:0,left:0,behavior:'auto'});
+    };
+  }
+
+  normalizeFinalScene();
   refresh();
 })();
