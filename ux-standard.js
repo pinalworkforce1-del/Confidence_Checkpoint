@@ -7,6 +7,7 @@
   const nativePlay=document.getElementById('narrationBtn');
   const accessBtn=document.getElementById('accessBtn');
   const accessDialog=document.getElementById('accessDialog');
+  const reduceMotion=document.getElementById('reduceMotion');
   if(!app||!stage)return;
 
   app.classList.add('level-up-standard');
@@ -28,6 +29,7 @@
   // remove duplicate learner-facing controls from the stage/bottom navigation.
   if(nativePlay){nativePlay.setAttribute('aria-hidden','true');nativePlay.tabIndex=-1;}
   if(accessBtn){accessBtn.setAttribute('aria-hidden','true');accessBtn.tabIndex=-1;}
+  if(reduceMotion)document.body.classList.toggle('reduce-motion',reduceMotion.checked);
 
   const q=(action)=>rail.querySelector(`[data-action="${action}"]`);
   const refresh=()=>{
