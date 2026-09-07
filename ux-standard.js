@@ -70,9 +70,6 @@
     refresh();
   };
 
-  // Skip must finish the current narration state without invoking the native
-  // toggle button after pausing it. The previous adapter paused first and then
-  // clicked the toggle, which correctly interpreted the click as "replay".
   q('skip').onclick=()=>{
     if(!video)return;
     video.pause();
@@ -121,10 +118,9 @@
     };
   }
 
-  // Present the readiness plan as an in-place completion sheet instead of a
-  // document appearing below the module at the learner's previous scroll
-  // position. Put Continue to Interview Arena first and keep the action bar
-  // visible while the learner reviews or saves the plan.
+  // Keep the readiness plan as the learner artifact. Progression belongs to
+  // Opportunity City, so the primary completion action returns to the map and
+  // lets the map reveal Interview Arena as the newly active destination.
   const nativeShowReport=typeof showReport==='function'?showReport:null;
   if(nativeShowReport){
     showReport=function(){
@@ -140,12 +136,27 @@
       report.classList.add('report-overlay');
       const actions=report.querySelector('.report-actions');
       const grid=report.querySelector('.report-grid');
-      const arena=report.querySelector('#arenaBtn');
+      const routeButton=report.querySelector('#arenaBtn');
       if(actions&&grid)report.insertBefore(actions,grid);
-      if(actions&&arena)actions.prepend(arena);
+      if(routeButton){
+        routeButton.id='cityBtn';
+        routeButton.textContent='Return to Opportunity City →';
+        routeButton.onclick=async()=>{
+          try{await window.LUCloud?.flush(state);}catch(_error){}
+          location.href=window.LEVEL_UP_CONFIG.PORTAL_URL+'?completed=confidence-checkpoint';
+        };
+        if(actions)actions.prepend(routeButton);
+      }
+      if(actions&&!report.querySelector('.completion-route')){
+        const note=document.createElement('div');
+        note.className='completion-route';
+        note.innerHTML='<strong>✓ Confidence Checkpoint Complete</strong><span>Interview Arena is now unlocked in Opportunity City.</span>';
+        report.insertBefore(note,actions);
+      }
       const returnButton=report.querySelector('#returnLesson');
       if(returnButton){
         const nativeReturn=returnButton.onclick;
+        returnButton.textContent='Review checkpoint';
         returnButton.onclick=(event)=>{
           document.body.classList.remove('report-open');
           report.classList.remove('report-overlay');
