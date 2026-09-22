@@ -1,0 +1,40 @@
+name: Validate Offline Engine
+
+on:
+  push:
+    branches: ["offline-engine-v1"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build offline manifest
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root=Path(".")
+          runtime=[]
+          for name in ["index.html","app.js","styles.css","github.css","ux-standard.css","completion-shell.css","config.js","supabase-sync.js","ux-standard.js","completion-shell.js","offline-sw.js","offline-client.js"]:
+              p=root/name
+              if p.exists():
+                  runtime.append({"path":"./"+name,"bytes":p.stat().st_size})
+          m={"engine":"Level Up Offline Engine","version":"1.0.0","scope":"/Confidence_Checkpoint/","totalBytes":sum(x["bytes"] for x in runtime),"files":runtime}
+          Path("offline-manifest.json").write_text(json.dumps(m,indent=2)+"\n",encoding="utf-8")
+          PY
+      - name: Validate offline package
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for name in ["index.html","offline-sw.js","offline-client.js","offline-manifest.json"]:
+              if not Path(name).exists(): raise SystemExit("Missing "+name)
+          m=json.loads(Path("offline-manifest.json").read_text())
+          if not any(x["path"].endswith("app.js") for x in m["files"]): raise SystemExit("app.js missing from manifest")
+          print("Validated",len(m["files"]),"runtime files")
+          PY
