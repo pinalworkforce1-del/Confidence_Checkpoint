@@ -23,6 +23,27 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+      - name: Generate offline manifest
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path('.')
+          runtime = []
+          for name in ['index.html','app.js','styles.css','github.css','ux-standard.css','completion-shell.css','config.js','supabase-sync.js','ux-standard.js','completion-shell.js','offline-sw.js','offline-client.js']:
+              p = root / name
+              if p.exists():
+                  runtime.append({'path':'./'+name,'bytes':p.stat().st_size})
+          manifest = {
+              'engine':'Level Up Offline Engine',
+              'version':'1.0.0',
+              'scope':'/Confidence_Checkpoint/',
+              'totalBytes':sum(x['bytes'] for x in runtime),
+              'files':runtime,
+          }
+          Path('offline-manifest.json').write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')
+          print(f"Offline manifest: {len(runtime)} files, {manifest['totalBytes']/1024/1024:.1f} MB")
+          PY
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload site
