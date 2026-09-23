@@ -17,9 +17,15 @@ const scenes=[
  {title:'CONFIDENCE CHECKPOINT COMPLETE',alt:'A participant and mentor review progress and prepare to continue.',activity:'reflection'}
 ];
 const imageFiles=[2,3,4,5,6,7,8,9,10,11,12,13,15,16,17,18].map(n=>`assets/image${n}.png`);
-let state=JSON.parse(localStorage.getItem('lu-confidence-state')||'null')||{scene:0,xp:0,earned:{},answers:{},viewed:{},narrated:{},complete:false,settings:{auto:true,captions:true,reduce:false}};
+const defaultState=()=>({scene:0,xp:0,earned:{},answers:{},viewed:{},narrated:{},complete:false,settings:{auto:true,captions:true,reduce:false}});
+const normalizeState=(raw={})=>{const base=defaultState();return {...base,...raw,earned:{...base.earned,...(raw.earned||{})},answers:{...base.answers,...(raw.answers||{})},viewed:{...base.viewed,...(raw.viewed||{})},narrated:{...base.narrated,...(raw.narrated||{})},settings:{...base.settings,...(raw.settings||{})}}};
+const stateKey=userId=>`lu-confidence-state-v2:${userId}`;
+const profileNameKey=userId=>`level-up-profile-name-v1:${userId}`;
+let activeStateKey=null;
+let activeUserId=null;
+let state=defaultState();
 let profileName='Participant';
-state.narrated ||= {};
+function loadLocalState(userId){try{const raw=localStorage.getItem(stateKey(userId));return raw?normalizeState(JSON.parse(raw)):defaultState()}catch{return defaultState()}}
 setTimeout(initializeCloud,0);
 const $=s=>document.querySelector(s), image=$('#sceneImage'),video=$('#narration'),next=$('#nextBtn'),narrBtn=$('#narrationBtn'),hotspots=$('#hotspots'),dialog=$('#activityDialog');
 const activities={
@@ -40,7 +46,7 @@ function choices(key,items,multi=false){const saved=state.answers[key]||[];retur
 function scenario(key,prompt,options,correct){return `<div class="field scenario"><span>${prompt}</span>${options.map((v,i)=>`<label class="choice"><input type="radio" name="${key}" value="${i}" data-correct="${correct}"><span>${v}</span></label>`).join('')}</div>`}
 function selectRow(label,key){return `<label class="field"><span>${label}</span><select data-answer="${key}"><option value="">Choose a time</option><option>The night before</option><option>In the morning</option><option>Before leaving</option><option>At the workplace</option></select></label>`}
 function esc(v){return String(v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
-function save(){state.updatedAt=new Date().toISOString();localStorage.setItem('lu-confidence-state',JSON.stringify(state));window.LUCloud?.queueSave(state)}
+function save(){state.updatedAt=new Date().toISOString();if(activeStateKey)localStorage.setItem(activeStateKey,JSON.stringify(state));window.LUCloud?.queueSave(state)}
 function asset(n){return imageFiles[n]}
 function narration(n){return `assets/media${n+1}.mp4`}
 function requiredComplete(){const a=scenes[state.scene].activity;if(!a)return true;if(a==='icons')return iconLessons.every((_,i)=>state.viewed[`4-${i}`]);return !!state.earned[a]}
@@ -50,8 +56,13 @@ function render(){
  video.onplay=()=>narrBtn.textContent='▹ Skip narration';video.onended=()=>{state.narrated[n]=true;save();narrBtn.textContent='↻ Replay narration';reveal()};
  next.disabled=!!s.activity&&!requiredComplete();
 }
-function reveal(){const a=scenes[state.scene].activity;if(!a)return;if(a==='icons'){iconLessons.forEach((x,i)=>addHotspot(i,x.pos,()=>openIcon(i)));setExplore(iconLessons.filter((_,i)=>state.viewed[`4-${i}`]).length,4)}else{const positions={scan:[52,57],needs:[44,58],kit:[70,57],situations:[55,53],routine:[50,52],reflection:[50,60]};addHotspot(a,positions[a],()=>openActivity(a));setExplore(state.earned[a]?1:0,1)} }
-function addHotspot(id,pos,fn){const b=document.createElement('button');b.className='hotspot';b.style.left=`calc(${pos[0]}% - 24px)`;b.style.top=`calc(${pos[1]}% - 24px)`;const done=scenes[state.scene].activity==='icons'?state.viewed[`4-${id}`]:state.earned[id];if(done)b.classList.add('done');b.textContent=done?'✓':'✦';b.setAttribute('aria-label',done?'Explored learning activity':'Explore learning activity');b.onclick=fn;hotspots.appendChild(b)}
+const activityCues={
+ scan:{label:'Readiness scan',icon:'✦'},needs:{label:'Support needs',icon:'+'},kit:{label:'Pack for success',icon:'◆'},
+ situations:{label:'Handle the moment',icon:'↔'},routine:{label:'Build your routine',icon:'⌁'},reflection:{label:'Complete checkpoint',icon:'✓'}
+};
+const readinessIcons=['◇','✦','△','◌'];
+function reveal(){const a=scenes[state.scene].activity;if(!a)return;if(a==='icons'){iconLessons.forEach((x,i)=>addHotspot(i,x.pos,()=>openIcon(i),{label:x.label,icon:readinessIcons[i]}));setExplore(iconLessons.filter((_,i)=>state.viewed[`4-${i}`]).length,4)}else{const positions={scan:[52,57],needs:[44,58],kit:[70,57],situations:[55,53],routine:[50,52],reflection:[50,60]};addHotspot(a,positions[a],()=>openActivity(a),activityCues[a]);setExplore(state.earned[a]?1:0,1)} }
+function addHotspot(id,pos,fn,cue={label:'Explore',icon:'✦'}){const b=document.createElement('button');b.className='hotspot';b.style.left=`${pos[0]}%`;b.style.top=`${pos[1]}%`;const done=scenes[state.scene].activity==='icons'?state.viewed[`4-${id}`]:state.earned[id];if(done)b.classList.add('done');b.innerHTML=`<span class="hotspot-marker" aria-hidden="true">${done?'✓':cue.icon}</span><span class="hotspot-label">${done?'Explored':esc(cue.label)}</span>`;b.setAttribute('aria-label',done?`${cue.label} explored`:`Explore ${cue.label}`);b.onclick=fn;hotspots.appendChild(b)}
 function setExplore(done,total){const el=$('#exploreStatus');el.hidden=false;el.textContent=done===total?`✓ ${total===1?'Activity complete':'All elements explored'}`:`✦ Explore ${done} of ${total}`}
 function openIcon(i){const item=iconLessons[i];$('#modalTitle').textContent=item.label;$('#modalBody').innerHTML=`<div class="lesson"><div class="flip" id="singleFlip" tabindex="0"><div class="flip-inner"><div class="flip-face"><b>${item.label}</b><span>Click to reveal the workplace connection.</span></div><div class="flip-face flip-back"><b>Why it matters</b><span>${item.text}</span></div></div></div><div class="modal-actions"><button id="iconDone">Mark explored · +15 XP</button></div></div>`;dialog.showModal();const flip=$('#singleFlip');flip.onclick=()=>flip.classList.toggle('open');flip.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();flip.classList.toggle('open')}};$('#iconDone').onclick=()=>{const k=`4-${i}`;if(!state.viewed[k]){state.viewed[k]=true;state.xp+=15;toast('+15 XP · Insight explored')}save();dialog.close();render()}}
 function openActivity(key){const a=activities[key];$('#modalTitle').textContent=a.title;$('#modalBody').innerHTML=a.render()+`<div class="modal-actions"><button id="completeActivity">${state.earned[key]?'Update my response':`Save and earn ${a.xp} XP`}</button></div>`;hydrate();wireChoices();dialog.showModal();$('#completeActivity').onclick=()=>completeActivity(key,a)}
@@ -83,12 +94,22 @@ async function initializeCloud(){
  gate.hidden=false;video.pause();
  const result=await window.LUCloud.init();
  if(!result.authenticated){title.textContent='Sign in to continue your journey';message.textContent='Confidence Checkpoint uses your Level Up profile to save progress across browsers.';list.innerHTML='<span>☁ Cloud progress</span><span>✓ One participant profile</span>';action.textContent='Sign in through My Journey';action.href=window.LEVEL_UP_CONFIG.PORTAL_URL;cloud.textContent='☁ Sign in required';return}
- profileName=result.profile?.display_name||result.user?.email?.split('@')[0]||'Participant';
+ activeUserId=result.user?.id||null;
+ activeStateKey=activeUserId?stateKey(activeUserId):null;
+ state=activeUserId?loadLocalState(activeUserId):defaultState();
+ const cloudName=(result.profile?.display_name||'').trim();
+ const cachedName=activeUserId?(localStorage.getItem(profileNameKey(activeUserId))||'').trim():'';
+ if(cloudName&&activeUserId)localStorage.setItem(profileNameKey(activeUserId),cloudName);
+ profileName=cloudName||cachedName||result.user?.email?.split('@')[0]||'Participant';
  const discoveryDone=result.prerequisites?.discovery,resumeDone=result.prerequisites?.resume;
  if(!discoveryDone||!resumeDone){title.textContent='Finish the earlier checkpoints first';message.textContent='Confidence Checkpoint opens after Discovery and Resume District are complete.';list.innerHTML=`<span>${discoveryDone?'✓':'○'} Discovery</span><span>${resumeDone?'✓':'○'} Resume District</span><span>○ Confidence Checkpoint</span>`;action.textContent='Return to My Journey';action.href=window.LEVEL_UP_CONFIG.PORTAL_URL;cloud.textContent='☁ Journey checked';return}
  const cloudState=result.progress?.journey_state;
- if(cloudState&&(!state.updatedAt||new Date(result.progress.updated_at)>new Date(state.updatedAt))){state={...state,...cloudState,settings:{...state.settings,...(cloudState.settings||{})},narrated:cloudState.narrated||{}};localStorage.setItem('lu-confidence-state',JSON.stringify(state))}
- gate.hidden=true;cloud.textContent='☁ Cloud synced';render();
+ const hasScopedLocal=!!(activeStateKey&&localStorage.getItem(activeStateKey));
+ const shouldUseCloud=cloudState&&!result.offline&&(!state.updatedAt||new Date(result.progress.updated_at||cloudState.updatedAt||0)>new Date(state.updatedAt||0));
+ const shouldUseOfflineLedger=cloudState&&result.offline&&hasScopedLocal&&(!state.updatedAt||new Date(result.progress.updated_at||cloudState.updatedAt||0)>new Date(state.updatedAt||0));
+ if(shouldUseCloud||shouldUseOfflineLedger){state=normalizeState(cloudState);if(activeStateKey)localStorage.setItem(activeStateKey,JSON.stringify(state))}
+ $('#autoPlay').checked=state.settings.auto;$('#showCaptions').checked=state.settings.captions;$('#reduceMotion').checked=state.settings.reduce;document.body.classList.toggle('reduce-motion',state.settings.reduce);
+ gate.hidden=true;cloud.textContent=result.offline?'⚠ Offline · progress stays on this device':'☁ Cloud synced';render();
 }
 window.addEventListener('lu-cloud-status',event=>{const cloud=$('#cloudStatus');if(event.detail==='saving')cloud.textContent='☁ Saving…';if(event.detail==='synced')cloud.textContent='☁ Cloud synced';if(event.detail==='error')cloud.textContent='⚠ Saved on this device'});
-$('#nextBtn').onclick=nextScene;$('#prevBtn').onclick=prevScene;$('#backBtn').onclick=prevScene;narrBtn.onclick=toggleNarration;$('#closeModal').onclick=()=>dialog.close();$('#accessBtn').onclick=()=>$('#accessDialog').showModal();$('.close-access').onclick=()=>$('#accessDialog').close();$('#autoPlay').checked=state.settings.auto;$('#showCaptions').checked=state.settings.captions;$('#reduceMotion').checked=state.settings.reduce;$('#autoPlay').onchange=e=>{state.settings.auto=e.target.checked;save()};$('#showCaptions').onchange=e=>{state.settings.captions=e.target.checked;video.hidden=!e.target.checked;save()};$('#reduceMotion').onchange=e=>{state.settings.reduce=e.target.checked;document.body.classList.toggle('reduce-motion',e.target.checked);save()};$('#soundBtn').onclick=()=>{video.muted=!video.muted;$('#soundBtn').textContent=video.muted?'🔇':'🔊'};$('#resetBtn').onclick=()=>{if(confirm('Reset this checkpoint and clear its saved progress?')){localStorage.removeItem('lu-confidence-state');location.reload()}};document.addEventListener('keydown',e=>{if(dialog.open||$('#accessDialog').open)return;if(e.key==='ArrowRight')nextScene();if(e.key==='ArrowLeft')prevScene()});render();
+$('#nextBtn').onclick=nextScene;$('#prevBtn').onclick=prevScene;$('#backBtn').onclick=prevScene;narrBtn.onclick=toggleNarration;$('#closeModal').onclick=()=>dialog.close();$('#accessBtn').onclick=()=>$('#accessDialog').showModal();$('.close-access').onclick=()=>$('#accessDialog').close();$('#autoPlay').checked=state.settings.auto;$('#showCaptions').checked=state.settings.captions;$('#reduceMotion').checked=state.settings.reduce;$('#autoPlay').onchange=e=>{state.settings.auto=e.target.checked;save()};$('#showCaptions').onchange=e=>{state.settings.captions=e.target.checked;video.hidden=!e.target.checked;save()};$('#reduceMotion').onchange=e=>{state.settings.reduce=e.target.checked;document.body.classList.toggle('reduce-motion',e.target.checked);save()};$('#soundBtn').onclick=()=>{video.muted=!video.muted;$('#soundBtn').textContent=video.muted?'🔇':'🔊'};$('#resetBtn').onclick=()=>{if(confirm('Reset this checkpoint and clear its saved progress?')){if(activeStateKey)localStorage.removeItem(activeStateKey);location.reload()}};document.addEventListener('keydown',e=>{if(dialog.open||$('#accessDialog').open)return;if(e.key==='ArrowRight')nextScene();if(e.key==='ArrowLeft')prevScene()});render();
