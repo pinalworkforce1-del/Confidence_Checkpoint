@@ -19,9 +19,23 @@
     if(!res.ok)throw new Error(`Cloud request failed (${res.status})`);
     const text=await res.text();return text?JSON.parse(text):null;
   }
+  function localProgress(moduleId){return window.LevelUpOfflineProgress?.get(moduleId)||null}
+  function localPrerequisites(){
+    return {
+      discovery:!!localProgress(cfg.DISCOVERY_MODULE_ID)?.is_complete,
+      resume:!!localProgress(cfg.RESUME_MODULE_ID)?.is_complete
+    };
+  }
   async function init(){
+    const stored=readSession();
     try{
-      if(!await refreshIfNeeded())return {authenticated:false};
+      if(!await refreshIfNeeded()){
+        if(stored?.user?.id){
+          user=stored.user;ready=false;
+          return {authenticated:true,user,offline:true,progress:localProgress(cfg.MODULE_ID),prerequisites:localPrerequisites()};
+        }
+        return {authenticated:false};
+      }
       user=session.user;
       if(!user?.id){const auth=await fetch(`${cfg.SUPABASE_URL}/auth/v1/user`,{headers:headers()});if(!auth.ok)return {authenticated:false};user=await auth.json()}
       const [profiles,progress]=await Promise.all([
@@ -30,15 +44,34 @@
       ]);
       ready=true;
       const byId=Object.fromEntries((progress||[]).map(row=>[row.module_id,row]));
-      return {authenticated:true,user,profile:profiles?.[0]||null,progress:byId[cfg.MODULE_ID]||null,prerequisites:{discovery:!!byId[cfg.DISCOVERY_MODULE_ID]?.is_complete,resume:!!byId[cfg.RESUME_MODULE_ID]?.is_complete}};
-    }catch(error){lastError=error;return {authenticated:!!user,error}}
+      const local=localPrerequisites();
+      return {
+        authenticated:true,
+        user,
+        profile:profiles?.[0]||null,
+        progress:byId[cfg.MODULE_ID]||localProgress(cfg.MODULE_ID)||null,
+        prerequisites:{
+          discovery:!!byId[cfg.DISCOVERY_MODULE_ID]?.is_complete||local.discovery,
+          resume:!!byId[cfg.RESUME_MODULE_ID]?.is_complete||local.resume
+        }
+      };
+    }catch(error){
+      lastError=error;
+      const fallback=readSession();
+      if(fallback?.user?.id){
+        user=fallback.user;ready=false;
+        return {authenticated:true,user,offline:true,error,progress:localProgress(cfg.MODULE_ID),prerequisites:localPrerequisites()};
+      }
+      return {authenticated:false,error};
+    }
   }
   async function flush(state){
-    if(!ready||!user)return false;
     const now=new Date().toISOString();state.updatedAt=now;
+    window.LevelUpOfflineProgress?.save(cfg.MODULE_ID,state,{xp:Math.max(0,Math.round(state.xp||0)),isComplete:!!state.complete,completedAt:state.complete?(state.completionDate||now):null,updatedAt:now});
+    if(!ready||!user)return false;
     const payload={user_id:user.id,module_id:cfg.MODULE_ID,journey_state:state,xp:Math.max(0,Math.round(state.xp||0)),is_complete:!!state.complete,updated_at:now,completed_at:state.complete?(state.completionDate||now):null};
-    try{await api('module_progress?on_conflict=user_id,module_id',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});lastError=null;window.dispatchEvent(new CustomEvent('lu-cloud-status',{detail:'synced'}));return true}catch(error){lastError=error;window.dispatchEvent(new CustomEvent('lu-cloud-status',{detail:'error'}));return false}
+    try{await api('module_progress?on_conflict=user_id,module_id',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});lastError=null;window.LevelUpOfflineProgress?.markSynced(cfg.MODULE_ID);window.dispatchEvent(new CustomEvent('lu-cloud-status',{detail:'synced'}));return true}catch(error){lastError=error;window.dispatchEvent(new CustomEvent('lu-cloud-status',{detail:'error'}));return false}
   }
-  function queueSave(state){if(!ready)return;window.dispatchEvent(new CustomEvent('lu-cloud-status',{detail:'saving'}));clearTimeout(timer);timer=setTimeout(()=>flush(state),700)}
+  function queueSave(state){window.LevelUpOfflineProgress?.save(cfg.MODULE_ID,state,{xp:Math.max(0,Math.round(state.xp||0)),isComplete:!!state.complete,completedAt:state.complete?(state.completionDate||null):null});if(!ready)return;window.dispatchEvent(new CustomEvent('lu-cloud-status',{detail:'saving'}));clearTimeout(timer);timer=setTimeout(()=>flush(state),700)}
   window.LUCloud={init,flush,queueSave,get user(){return user},get lastError(){return lastError}};
 })();
