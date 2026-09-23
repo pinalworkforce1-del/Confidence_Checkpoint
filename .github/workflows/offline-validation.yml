@@ -20,7 +20,7 @@ jobs:
           from pathlib import Path
           root=Path(".")
           runtime=[]
-          for name in ["index.html","app.js","styles.css","github.css","ux-standard.css","completion-shell.css","config.js","supabase-sync.js","ux-standard.js","completion-shell.js","offline-sw.js","offline-client.js"]:
+          for name in ["index.html","app.js","styles.css","github.css","ux-standard.css","completion-shell.css","config.js","supabase-sync.js","ux-standard.js","completion-shell.js","offline-sw.js","offline-client.js","offline-progress.js"]:
               p=root/name
               if p.exists():
                   runtime.append({"path":"./"+name,"bytes":p.stat().st_size})
