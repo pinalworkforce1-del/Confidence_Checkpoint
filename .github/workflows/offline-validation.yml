@@ -1,29 +1,20 @@
-name: Deploy Confidence Checkpoint
+name: Validate Offline Engine
 
 on:
   push:
-    branches: [main]
+    branches: ["offline-engine-v1"]
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-      - name: Generate offline manifest
+      - uses: actions/checkout@v4
+
+      - name: Build offline manifest
         run: |
           python3 - <<'PY'
           import json
@@ -65,14 +56,25 @@ jobs:
               'files':rows,
           }
           Path('offline-manifest.json').write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')
-          print(f"Offline manifest: {len(rows)} files, {total/1024/1024:.1f} MB")
           PY
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-      - name: Upload site
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: .
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+
+      - name: Validate offline package
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          for name in ['index.html','offline-sw.js','offline-client.js','offline-manifest.json']:
+              if not Path(name).exists():
+                  raise SystemExit('Missing ' + name)
+
+          m = json.loads(Path('offline-manifest.json').read_text())
+          paths = [x['path'] for x in m['files']]
+          required_exts = ['.js','.css','.png','.mp4']
+          for ext in required_exts:
+              if not any(p.endswith(ext) for p in paths):
+                  raise SystemExit('Manifest has no ' + ext + ' assets')
+          if './app.js' not in paths:
+              raise SystemExit('app.js missing from manifest')
+          print('Validated', len(paths), 'files,', round(m['totalBytes']/1024/1024,1), 'MB')
+          PY
