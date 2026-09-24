@@ -19,7 +19,15 @@
         <div class="journey-line"><span id="chapter">ARRIVAL</span><span id="sceneLabel">SCENE 1 OF 16</span></div>
         <div class="progress"><i id="progressFill"></i></div>
       </div>
-      <div class="status"><span id="cloudStatus" class="cloud-status">☁ Connecting</span><strong id="xp">0 XP</strong><button id="backBtn" aria-label="Previous scene">←</button><button id="soundBtn" aria-label="Mute narration">🔊</button><button id="resetBtn" aria-label="Reset checkpoint">↻</button></div>
+      <div class="status">
+        <button id="cityBtnTop" class="utility-control city-control" aria-label="Back to Opportunity City" title="Back to Opportunity City"><span aria-hidden="true">←</span><b>Opportunity City</b></button>
+        <span id="cloudStatus" class="cloud-status" title="Level Up save status">☁ Connecting</span>
+        <strong id="xp">0 XP</strong>
+        <button id="helpBtn" class="utility-control" aria-label="Open Confidence Checkpoint help" title="Help"><span aria-hidden="true">?</span><b>Help</b></button>
+        <button id="resetBtn" class="utility-control clear-control" aria-label="Clear Confidence Checkpoint progress" title="Clear Confidence Checkpoint progress"><span aria-hidden="true">↻</span><b>Clear</b></button>
+        <button id="backBtn" class="functional-source" aria-label="Previous scene" aria-hidden="true" tabindex="-1">←</button>
+        <button id="soundBtn" class="functional-source" aria-label="Mute narration" aria-hidden="true" tabindex="-1">🔊</button>
+      </div>
     </header>
 
     <section class="stage" aria-live="polite">
@@ -41,6 +49,18 @@
   <dialog id="activityDialog" class="modal">
     <div class="modal-head"><div><small>CONFIDENCE CHECKPOINT · MICRO LESSON</small><h2 id="modalTitle"></h2></div><button id="closeModal" aria-label="Close">×</button></div>
     <div id="modalBody"></div>
+  </dialog>
+
+  <dialog id="helpDialog" class="modal compact">
+    <div class="modal-head"><div><small>HELP</small><h2>Confidence Checkpoint controls</h2></div><button class="close-help" aria-label="Close">×</button></div>
+    <div class="help-guide">
+      <p><b>Opportunity City</b> returns you to the Level Up city without clearing your Confidence Checkpoint progress.</p>
+      <p><b>Cloud save</b> shows whether your progress is saved, saving, or temporarily stored on this device.</p>
+      <p><b>Glowing hotspots</b> mark activities and elements you can select to explore.</p>
+      <p><b>Scene controls</b> let you manage audio, accessibility, narration, skipping, replay, and continuing.</p>
+      <p><b>Clear</b> restarts Confidence Checkpoint after you confirm the reset.</p>
+      <p>Your XP tracks completed learning interactions. It is progress—not a score.</p>
+    </div>
   </dialog>
 
   <dialog id="accessDialog" class="modal compact">
