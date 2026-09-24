@@ -3,6 +3,7 @@
   const stage=document.querySelector('.stage');
   const video=document.getElementById('narration');
   const next=document.getElementById('nextBtn');
+  const prev=document.getElementById('prevBtn');
   const sound=document.getElementById('soundBtn');
   const nativePlay=document.getElementById('narrationBtn');
   const accessBtn=document.getElementById('accessBtn');
@@ -22,6 +23,7 @@
     <button data-action="replay"><span class="control-icon">↻</span><span class="control-label">Replay narration</span></button>
     <button data-action="skip"><span class="control-icon">↠</span><span class="control-label">Skip narration</span></button>
     <button data-action="play"><span class="control-icon">▶</span><span class="control-label">Play narration</span></button>
+    <button class="rail-back" data-action="back"><span class="control-icon">←</span><span class="control-label">Back</span></button>
     <button class="rail-continue" data-action="continue">Continue <span>→</span></button>`;
   stage.insertAdjacentElement('afterend',rail);
 
@@ -39,6 +41,7 @@
     q('audio').querySelector('.control-label').textContent=video?.muted?'Audio off':'Audio on';
     q('play').querySelector('.control-icon').textContent=playing?'Ⅱ':'▶';
     q('play').querySelector('.control-label').textContent=playing?'Pause narration':'Play narration';
+    q('back').disabled=!!prev?.disabled;
     q('continue').disabled=!!next?.disabled;
   };
 
@@ -81,12 +84,15 @@
     setTimeout(refresh,0);
   };
 
+  q('back').onclick=()=>{prev?.click();setTimeout(refresh,0);};
   q('continue').onclick=()=>next?.click();
 
   if(video){
     ['play','pause','ended','volumechange','loadedmetadata'].forEach((eventName)=>video.addEventListener(eventName,refresh));
   }
-  new MutationObserver(refresh).observe(next||app,{attributes:true,attributeFilter:['disabled','class']});
+  const navObserver=new MutationObserver(refresh);
+  if(prev)navObserver.observe(prev,{attributes:true,attributeFilter:['disabled','class']});
+  if(next)navObserver.observe(next,{attributes:true,attributeFilter:['disabled','class']});
 
   // Older saved/cloud states can contain complete=true without the reflection
   // activity flag. Completion is authoritative: remove the pulsing hotspot and
