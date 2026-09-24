@@ -62,11 +62,25 @@
     </div>
   </dialog>
 
-  <dialog id="accessDialog" class="modal compact">
-    <div class="modal-head"><div><small>ACCESSIBILITY</small><h2>Choose how you learn</h2></div><button class="close-access" aria-label="Close">×</button></div>
-    <label class="switch-row"><span>Play narration automatically</span><input id="autoPlay" type="checkbox" checked></label>
-    <label class="switch-row"><span>Show visual captions</span><input id="showCaptions" type="checkbox" checked></label>
-    <label class="switch-row"><span>Reduce motion</span><input id="reduceMotion" type="checkbox"></label>
+  <dialog id="accessDialog" class="modal compact accessibility-dialog">
+    <div class="modal-head"><div><small id="accessKicker">ACCESSIBILITY • SCENE 1 OF 16</small><h2 id="accessTitle">Arrival</h2></div><button class="close-access" aria-label="Close">×</button></div>
+    <p class="access-intro">Adjust the experience at any time. Your choices are saved with your Level Up progress.</p>
+    <section class="scene-description" aria-labelledby="accessDescribeTitle">
+      <div class="scene-description-title"><span aria-hidden="true">◉</span><strong id="accessDescribeTitle">Describe this scene</strong></div>
+      <p id="accessDescription"></p>
+    </section>
+    <div class="accessibility-options" aria-label="Accessibility preferences">
+      <label class="preference-row"><span><strong>Larger interface text</strong><small>Increases controls and readable text without changing the artwork.</small></span><input id="largeText" type="checkbox"></label>
+      <label class="preference-row"><span><strong>Reduce motion</strong><small>Turns off pulses, flips, and decorative movement.</small></span><input id="reduceMotion" type="checkbox"></label>
+      <fieldset class="speed-options"><legend>Narration speed</legend><div>
+        <button type="button" data-rate="0.75">0.75×</button>
+        <button type="button" data-rate="1">1×</button>
+        <button type="button" data-rate="1.25">1.25×</button>
+        <button type="button" data-rate="1.5">1.5×</button>
+      </div></fieldset>
+    </div>
+    <p class="caption-note">Captions appear with every narration video. You can pause, replay, mute, change speed, or skip narration without losing access to the scene.</p>
+    <button id="returnFromAccess" class="access-return" type="button">Return to Confidence Checkpoint</button>
   </dialog>
 
   <section id="report" class="report" hidden></section>
